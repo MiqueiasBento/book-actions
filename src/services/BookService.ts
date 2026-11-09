@@ -1,41 +1,43 @@
-import { isValidObjectId } from 'mongoose';
 import type { CreateBookDTO, UpdateBookDTO } from '../dtos/book.dto.js';
+import { prisma } from '../database/prisma.js';
 import { AppError } from '../errors/AppError.js';
-import { BookModel } from '../models/BookModel.js';
 
-function validateId(id: string): void {
-  if (!isValidObjectId(id)) throw new AppError('ID inválido');
+function parseId(id: string): number {
+  const value = Number(id);
+  if (!/^\d+$/.test(id) || !Number.isSafeInteger(value) || value < 1) throw new AppError('ID inválido');
+  return value;
 }
 
 export class BookService {
   async list(search?: string) {
-    const filter = search
-      ? { $or: [{ title: { $regex: search, $options: 'i' } }, { author: { $regex: search, $options: 'i' } }] }
-      : {};
-    return BookModel.find(filter).sort({ createdAt: -1 });
+    return prisma.book.findMany({
+      where: search ? { OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { author: { contains: search, mode: 'insensitive' } },
+      ] } : undefined,
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async findById(id: string) {
-    validateId(id);
-    const book = await BookModel.findById(id);
+    const book = await prisma.book.findUnique({ where: { id: parseId(id) } });
     if (!book) throw new AppError('Livro não encontrado', 404);
     return book;
   }
 
   async create(data: CreateBookDTO) {
-    return BookModel.create(data);
+    return prisma.book.create({ data });
   }
 
   async update(id: string, data: UpdateBookDTO) {
-    validateId(id);
-    const book = await BookModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-    if (!book) throw new AppError('Livro não encontrado', 404);
-    return book;
+    const bookId = parseId(id);
+    const result = await prisma.book.updateMany({ where: { id: bookId }, data });
+    if (!result.count) throw new AppError('Livro não encontrado', 404);
+    return prisma.book.findUniqueOrThrow({ where: { id: bookId } });
   }
 
   async remove(id: string): Promise<void> {
-    validateId(id);
-    const book = await BookModel.findByIdAndDelete(id);
-    if (!book) throw new AppError('Livro não encontrado', 404);
+    const result = await prisma.book.deleteMany({ where: { id: parseId(id) } });
+    if (!result.count) throw new AppError('Livro não encontrado', 404);
   }
 }

@@ -6,7 +6,7 @@ import { BookService } from '../src/services/BookService.js';
 import { AppError } from '../src/errors/AppError.js';
 import { swaggerDocument } from '../src/config/swagger.js';
 
-const id = '507f1f77bcf86cd799439011';
+const id = '1';
 const body = { title: 'Clean Code', author: 'Robert C. Martin', publishedYear: 2008, available: false };
 
 async function replace(payload: object, bookId = id) {

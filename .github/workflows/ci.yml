@@ -1,0 +1,48 @@
+name: Testar API, migrações e imagem
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://biblioteca:${{ secrets.CI_POSTGRES_PASSWORD }}@127.0.0.1:5432/biblioteca?schema=public
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: biblioteca
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: biblioteca
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U biblioteca -d biblioteca"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:migrations
+      - run: npm run db:deploy
+      - run: docker build -t book-prisma:ci .
+      - name: Testar API dentro da imagem
+        run: |
+          docker run -d --name book-prisma-api --network host --env DATABASE_URL --env PORT=3333 book-prisma:ci
+          trap 'docker logs book-prisma-api; docker rm -f book-prisma-api' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3333/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3333/books | grep -q 'Clean Code'

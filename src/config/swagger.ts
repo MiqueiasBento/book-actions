@@ -39,13 +39,14 @@ export const swaggerDocument = {
       UpdateBook: z.toJSONSchema(updateBookSchema, { target: 'openapi-3.0', io: 'input' }),
       Book: {
         type: 'object',
-        required: ['id', 'title', 'author', 'publishedYear', 'available', 'createdAt', 'updatedAt'],
+        required: ['id', 'title', 'author', 'publishedYear', 'available', 'category', 'createdAt', 'updatedAt'],
         properties: {
-          id: { type: 'string', pattern: '^[a-fA-F0-9]{24}$', example: '507f1f77bcf86cd799439011' },
+          id: { type: 'integer', minimum: 1, example: 1 },
           title: { type: 'string', example: bookExample.title },
           author: { type: 'string', example: bookExample.author },
           publishedYear: { type: 'integer', example: 2008 },
           available: { type: 'boolean', example: true },
+          category: { type: 'string', example: 'geral' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -98,8 +99,8 @@ export const swaggerDocument = {
       },
     },
     '/books/{id}': {
-      parameters: [{ name: 'id', in: 'path', required: true, description: 'ObjectId do livro',
-        schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' }, example: '507f1f77bcf86cd799439011' }],
+      parameters: [{ name: 'id', in: 'path', required: true, description: 'ID numérico do livro',
+        schema: { type: 'integer', minimum: 1 }, example: 1 }],
       get: {
         tags: ['Books'], summary: 'Busca um livro pelo ID', operationId: 'getBook',
         responses: { 200: jsonResponse('Livro encontrado', ref('Book')), ...errors },

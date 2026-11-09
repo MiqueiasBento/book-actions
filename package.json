@@ -5,7 +5,7 @@
   "description": "API de biblioteca com Express, Prisma e PostgreSQL",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
     "db:generate": "prisma generate",
